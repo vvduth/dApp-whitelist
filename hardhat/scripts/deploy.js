@@ -5,22 +5,24 @@
 // will compile your contracts, add the Hardhat Runtime Environment's members to the
 // global scope, and execute the script.
 const hre = require("hardhat");
+const {ethers} = require("hardhat") ;
 
 async function main() {
-  const currentTimestampInSeconds = Math.round(Date.now() / 1000);
-  const ONE_YEAR_IN_SECS = 365 * 24 * 60 * 60;
-  const unlockTime = currentTimestampInSeconds + ONE_YEAR_IN_SECS;
+   /*
+  A ContractFactory in ethers.js is an abstraction used to deploy new smart contracts,
+  so whitelistContract here is a factory for instances of our Whitelist contract.
+  */
 
-  const lockedAmount = hre.ethers.utils.parseEther("1");
+  const whitelistContract = await ethers.getContractFactory("WhiteList"); 
 
-  const Lock = await hre.ethers.getContractFactory("Lock");
-  const lock = await Lock.deploy(unlockTime, { value: lockedAmount });
+  // here we delpoy the contract
+  const deployWhitelistContract = await whitelistContract.deploy(10) ;
+  // 10 the the meximun number ob address, so y
 
-  await lock.deployed();
+  // wait for it to finish deploying
+  await deployWhitelistContract.deployed() ; 
 
-  console.log(
-    `Lock with 1 ETH and unlock timestamp ${unlockTime} deployed to ${lock.address}`
-  );
+  console.log("White list contract adress: " , deployWhitelistContract.address )
 }
 
 // We recommend this pattern to be able to use async/await everywhere
