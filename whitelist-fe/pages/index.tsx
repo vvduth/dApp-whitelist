@@ -1,9 +1,12 @@
 import type { NextPage } from "next";
 import styles from "../styles/Home.module.css";
 import Web3Modal from "web3modal";
-import { providers, Contract } from "ethers";
+import { providers, Contract, Signer } from "ethers";
 import { useEffect, useRef, useState } from "react";
 import { WHITELIST_CONTRACT_ADDRESS, abi } from "../contants/constant";
+import pukedukelogo from '../assets/pukedukelogo.png'
+
+import Head from "next/head";
 const Home: NextPage = () => {
   const [walletConnected, setWalletConnected] = useState<boolean>(false);
 
@@ -48,30 +51,151 @@ const Home: NextPage = () => {
     return web3Provider;
   };
 
+  // the number of whitelisted addre
+  // TODO: implement to get number of  address in the whitlisy
+
+  // manage number of whitelist
+  const getNumberOfWhiteList = async () => {
+    try {
+      const provider = await getProviderOrSigner();
+      const whiteListContract = new Contract(
+        WHITELIST_CONTRACT_ADDRESS,
+        abi,
+        provider
+      );
+      const _numberOfWhiteListed =
+        await whiteListContract.numAddressesWhitelisted();
+      setNumberOfWhitelisted(_numberOfWhiteListed);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   // add address to white list
   const addAddresstoWhiteList = async () => {
     try {
       // we need signer since this is a write function
-      const signer = await getProviderOrSigner(true) ; 
+      const signer = await getProviderOrSigner(true);
 
-      // create a new instance of the contract with a signer, which allows 
+      // create a new instance of the contract with a signer, which allows
       // uodate method
       const whiteListContract = new Contract(
-        WHITELIST_CONTRACT_ADDRESS, 
-        abi, 
-        signer 
-      ); 
+        WHITELIST_CONTRACT_ADDRESS,
+        abi,
+        signer
+      );
       // the method from teh contract
-      const tx = await whiteListContract.addAddressToWhiteList() ; 
-      setIsLoading(true) ; 
-      await tx.await() ; 
-
-    } catch(e) {
-
+      const tx = await whiteListContract.addAddressToWhiteList();
+      setIsLoading(true);
+      // wait for the transaction to get mined
+      await tx.await();
+      setIsLoading(false);
+    } catch (e) {
+      console.log(e);
     }
-  }
+  };
 
-  return <div>hello</div>;
+  const checkIfAddressInWhiteList = async () => {
+    try {
+      const signer = (await getProviderOrSigner(true)) as Signer;
+      const whitelistContract = new Contract(
+        WHITELIST_CONTRACT_ADDRESS,
+        abi,
+        signer
+      );
+
+      // use signer although this is read function cuz sign can use for read as well
+      // get the address
+      const address = await signer.getAddress();
+      // call the whitelistedAddresses from the contract
+      const _joinedWhitelist = await whitelistContract.whitelistedAddresses(
+        address
+      );
+      setJoinedWhiteLisr(_joinedWhitelist);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+  const connectWallet = async () => {
+    try {
+      await getProviderOrSigner();
+      setWalletConnected(true);
+      checkIfAddressInWhiteList();
+      getNumberOfWhiteList();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+  /*
+    renderButton: Returns a button based on the state of the dapp
+  */
+  const renderButton = () => {
+    if (walletConnected) {
+      if (joinedWhiteList) {
+        return (
+          <div className={styles.description}>
+            Thanks for joining the Whitelist!
+          </div>
+        );
+      } else if (loading) {
+        return <button className={styles.button}>Loading...</button>;
+      } else {
+        return (
+          <button onClick={addAddresstoWhiteList} className={styles.button}>
+            Join the Whitelist
+          </button>
+        );
+      }
+    } else {
+      return (
+        <button onClick={connectWallet} className={styles.button}>
+          Connect your wallet
+        </button>
+      );
+    }
+  };
+
+  useEffect(() => {
+    // Assign the Web3Modal class to the reference object by setting it's `current` value
+    // The `current` value is persisted throughout as long as this page is open
+    if (!walletConnected) {
+      web3ModalRef.current = new Web3Modal({
+        network: "goerli",
+        providerOptions: {},
+        disableInjectedProvider: false,
+      });
+    }
+    connectWallet();
+  }, [walletConnected]);
+
+  return (
+    <div>
+      <Head>
+        <title>Whitelist Dapp</title>
+        <meta name="description" content="Whitelist-Dapp" />
+        <link rel="icon" href="/favicon.ico" />
+      </Head>
+      <div className={styles.main}>
+        <div>
+          <h1 className={styles.title}>Welcome to PukeDuke!</h1>
+          <div className={styles.description}>
+            Its an NFT collection for developers in Crypto.
+          </div>
+          <div className={styles.description}>
+            {numberOfwhiteListed} have already joined the Whitelist
+          </div>
+          {renderButton()}
+        </div>
+        <div>
+          <img className={styles.image} src={`https://source.unsplash.com/1600x900/?$web3`} />
+        </div>
+      </div>
+
+      <footer className={styles.footer}>
+        Made with &#10084; by Duc Thai - inspired by web 3 Dao
+      </footer>
+    </div>
+  );
 };
 
 export default Home;
